@@ -1,0 +1,14 @@
+{
+ "locator":"libWPEFrameworkCobaltHtmlApp.so",
+ "classname":"CobaltHtmlApp",
+ "precondition":[
+  "Platform",
+  "Graphics"
+ ],
+ "autostart":false,
+ "configuration":{
+  "root":{
+   "outofprocess":true
+  }
+ }
+}

@@ -1,0 +1,29 @@
+{
+  "$schema": "interface.schema.json",
+  "jsonrpc": "2.0",
+  "info": {
+    "title": "Cobalt API",
+    "class": "Cobalt",
+    "description": "Cobalt JSON-RPC interface"
+  },
+  "common": {
+    "$ref": "common.json"
+  },
+  "include": {
+    "statecontrol": {
+      "$ref": "StateControl.json#"
+    }
+  },
+  "methods": {
+    "deeplink": {
+      "summary": "Send a deep link to the application",
+      "params": {
+        "description": "An application-specific link",
+        "type": "string"
+      },
+      "result": {
+        "type": "null"
+      }
+    }
+  }
+}

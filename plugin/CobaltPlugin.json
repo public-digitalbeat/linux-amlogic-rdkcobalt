@@ -1,0 +1,42 @@
+{
+  "$schema": "plugin.schema.json",
+  "info": {
+    "title": "Cobalt Plugin",
+    "callsign": "Cobalt",
+    "locator": "libWPEFrameworkCobalt.so",
+    "status": "beta",
+    "description": "The Cobalt plugin provides web browsing functionality based on the Cobalt engine.",
+    "version": "1.0"
+  },
+  "configuration": {
+    "type": "object",
+    "properties": {
+      "configuration": {
+        "type": "object",
+        "required": [],
+        "properties": {
+          "web_file_path": {
+            "type": "string",
+            "description": "The web_file_path where is loaded upon starting the browser"
+          },
+          "url": {
+            "type": "string",
+            "description": "The URL that is loaded upon starting the browser"
+          },
+          "language": {
+            "type": "string",
+            "description": "POSIX-style Language(Locale) ID. Example: 'en_US'"
+          }
+        }
+      }
+    },
+    "required": [
+      "callsign",
+      "classname",
+      "locator"
+    ]
+  },
+  "interface": {
+    "$ref": "{interfacedir}/Cobalt.json#"
+  }
+}
