@@ -70,6 +70,7 @@
         'ldflags': [
           '<!@(<(pkg-config) --libs-only-L --libs-only-other <(gst-packages))',
           '-lgstsecmemallocator',
+          '-lgstamlsvpext',
         ],
         'libraries': [
           '<!@(<(pkg-config) --libs-only-l <(gst-packages))',

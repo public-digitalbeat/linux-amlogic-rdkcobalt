@@ -49,7 +49,7 @@ extern "C" SB_EXPORT_PLATFORM int main(int argc, char** argv) {
   starboard::shared::signal::InstallSuspendSignalHandlers();
 
 #if SB_IS(EVERGREEN_COMPATIBLE)
-  third_party::crashpad::wrapper::InstallCrashpadHandler();
+  third_party::crashpad::wrapper::InstallCrashpadHandler(true);
 #endif
 
   third_party::starboard::rdk::shared::Application application;

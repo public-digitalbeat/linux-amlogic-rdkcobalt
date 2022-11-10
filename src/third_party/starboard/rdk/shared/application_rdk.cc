@@ -100,6 +100,7 @@ Application::Application()
   , hdcp_profile_ (new HdcpProfile)
   , networkinfo_ (new NetworkInfo)
   , rdkshellinfo_ (new RDKShellInfo)
+  , voiceinputinfo_ (new VoiceInput)
   , hang_monitor_(new HangMonitor("Application")) {
   bool error = false;
   ctx_ = EssContextCreate();
@@ -121,6 +122,7 @@ Application::Application()
     const char *detail = EssContextGetLastErrorDetail(ctx_);
     SB_LOG(ERROR) << "Essos error: '" <<  detail << '\'';
   }
+ //voiceinputinfo_ = new VoiceInput;
 }
 
 Application::~Application() {
@@ -425,6 +427,46 @@ void Application::SendRevealEvent()
 {
 #if SB_API_VERSION >= 13
     Inject(new Event(kSbEventTypeReveal, NULL, NULL));
+#endif
+}
+void Application::SendMicTriggerEvent()
+{
+#if SB_API_VERSION >= 13
+  SB_LOG(ERROR)<<"cobalt:  sendmictriggerEvent start"<<state();
+  if (state() != kStateFrozen && state() != kStateStopped) {
+
+    {
+      SbInputData* data = new SbInputData();
+      memset(data, 0, sizeof(*data));
+    #if SB_API_VERSION < 13
+      data->timestamp = SbTimeGetMonotonicNow();
+    #endif
+      data->type = kSbInputEventTypePress;
+      data->device_type = kSbInputDeviceTypeRemote;
+      data->device_id = 1;  // kKeyboardDeviceId;
+      data->key = kSbKeyMicrophone;
+      data->key_location = kSbKeyLocationUnspecified;
+      data->key_modifiers = 0;
+      InjectInputEvent(data);
+      SB_LOG(ERROR)<<"cobalt: inject keymicrophone event press";
+    }
+
+    {
+      SbInputData* data = new SbInputData();
+      memset(data, 0, sizeof(*data));
+    #if SB_API_VERSION < 13
+      data->timestamp = SbTimeGetMonotonicNow();
+    #endif
+      data->type = kSbInputEventTypeUnpress;
+      data->device_type = kSbInputDeviceTypeRemote;
+      data->device_id = 1;  // kKeyboardDeviceId;
+      data->key = kSbKeyMicrophone;
+      data->key_location = kSbKeyLocationUnspecified;
+      data->key_modifiers = 0;
+      InjectInputEvent(data);
+      SB_LOG(ERROR)<<"cobalt: inject keymicrophone event release";
+    }
+  }
 #endif
 }
 }  // namespace shared

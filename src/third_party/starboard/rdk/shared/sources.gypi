@@ -140,13 +140,14 @@
         '<(DEPTH)/third_party/starboard/rdk/shared/media/media_is_transfer_characteristics_supported.cc',
         '<(DEPTH)/third_party/starboard/rdk/shared/media/media_is_video_supported.cc',
 
-        '<(DEPTH)/starboard/shared/stub/microphone_close.cc',
-        '<(DEPTH)/starboard/shared/stub/microphone_create.cc',
-        '<(DEPTH)/starboard/shared/stub/microphone_destroy.cc',
-        '<(DEPTH)/starboard/shared/stub/microphone_get_available.cc',
-        '<(DEPTH)/starboard/shared/stub/microphone_is_sample_rate_supported.cc',
-        '<(DEPTH)/starboard/shared/stub/microphone_open.cc',
-        '<(DEPTH)/starboard/shared/stub/microphone_read.cc',
+        '<(DEPTH)/third_party/starboard/rdk/shared/microphone/microphone_close.cc',
+        '<(DEPTH)/third_party/starboard/rdk/shared/microphone/microphone_create.cc',
+        '<(DEPTH)/third_party/starboard/rdk/shared/microphone/microphone_destroy.cc',
+        '<(DEPTH)/third_party/starboard/rdk/shared/microphone/microphone_get_available.cc',
+        '<(DEPTH)/third_party/starboard/rdk/shared/microphone/microphone_is_sample_rate_supported.cc',
+        '<(DEPTH)/third_party/starboard/rdk/shared/microphone/microphone_open.cc',
+        '<(DEPTH)/third_party/starboard/rdk/shared/microphone/microphone_read.cc',
+        '<(DEPTH)/third_party/starboard/rdk/shared/microphone/microphone_internal.cc',
     ],
 
     'memory_sources': [

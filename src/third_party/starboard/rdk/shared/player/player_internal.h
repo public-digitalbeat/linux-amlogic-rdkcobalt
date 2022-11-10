@@ -39,6 +39,8 @@ struct SB_EXPORT Player {
   virtual bool SetRate(double rate,bool bsave) = 0;
   virtual void GetInfo(SbPlayerInfo2* info) = 0;
   virtual void SetBounds(int zindex, int x, int y, int w, int h) = 0;
+  virtual SbTime GetVidLastPushPts() = 0;
+  virtual SbTime GetAudLastPushPts() = 0;
 };
 
 }  // namespace player

@@ -83,6 +83,7 @@ class Application : public ::starboard::shared::starboard::QueueApplication {
   void SendConcealEvent();
   void SendNetworkDisconnectEvent();
   void SendNetworkConnectEvent();
+  void SendMicTriggerEvent();
   bool IsStartImmediate() override { return !HasPreloadSwitch(); }
   bool IsPreloadImmediate() override { return HasPreloadSwitch(); }
   bool IsResumed();
@@ -133,6 +134,7 @@ class Application : public ::starboard::shared::starboard::QueueApplication {
   std::unique_ptr<HdcpProfile> hdcp_profile_ { nullptr };
   std::unique_ptr<NetworkInfo> networkinfo_ { nullptr };
   std::unique_ptr<RDKShellInfo> rdkshellinfo_ { nullptr };
+  std::unique_ptr<VoiceInput> voiceinputinfo_ { nullptr };
 
 };
 

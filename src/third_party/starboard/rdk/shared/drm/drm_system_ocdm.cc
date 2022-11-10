@@ -95,6 +95,10 @@ class Session {
   void Update(const void* key, int key_size, int ticket);
   std::string Id() const { return id_; }
   OpenCDMSession* OcdmSession() const { return session_.get(); }
+  int GetSessionFrameWidth() const {return frame_width_; }
+  int GetSessionFrameHeight() const {return frame_height_; }
+  void SetSessionFrameWidth(int width)  { frame_width_ = width; }
+  void SetSessionFrameHeight(int height) { frame_height_ = height; }
 
  private:
   static void OnProcessChallenge(OpenCDMSession* session,
@@ -142,6 +146,8 @@ class Session {
   std::string last_challenge_;
   std::string last_challenge_url_;
   std::string id_;
+  int frame_width_{0};
+  int frame_height_{0};
 };
 
 Session::Session(
@@ -234,7 +240,7 @@ void Session::Update(const void* key, int key_size, int ticket) {
   SB_DCHECK(!id.empty());
   {
     ::starboard::ScopedLock lock(mutex_);
-    SB_LOG(INFO) << "Updating session " << id;
+    SB_LOG(INFO) << "Updating session " << id << " ticket " << ticket;
     ticket_ = ticket;
     operation_ = Operation::kUpdate;
   }
@@ -244,6 +250,7 @@ void Session::Update(const void* key, int key_size, int ticket) {
                               kSbDrmStatusUnknownError, nullptr, id.c_str(),
                               id.size());
   }
+  SB_LOG(INFO) << "sent update message to widevine OCDM server";
 }
 
 // static
@@ -324,6 +331,9 @@ void Session::OnKeyUpdated(struct OpenCDMSession* /*ocdm_session*/,
   }
 
   auto status = opencdm_session_status(session->session_.get(), key_id, length);
+  SB_LOG(INFO) << "session-id " << id << " from OCDM server, save key info to session, not call cobalt callback, key-id "\
+      << DrmSystemOcdm::hex2string(key_id, length).c_str() << \
+      " status " << DrmSystemOcdm::keyStatusToString(KeyStatus2DrmKeyStatus(status));
   SbDrmKeyId drm_key_id;
   std::copy_n(key_id, length, drm_key_id.identifier);
   drm_key_id.identifier_size = length;
@@ -354,6 +364,7 @@ void Session::OnAllKeysUpdated(const struct OpenCDMSession* /*ocdm_session*/,
                                      id.c_str(), id.size());
   session->drm_system_->OnAllKeysUpdated();
 
+  SB_LOG(INFO) << "from OCDM server, updating all the keys status and inovke cobalt callback " << " session-id " << id;
   auto session_keys = session->drm_system_->GetSessionKeys(id);
   std::vector<SbDrmKeyId> keys;
   std::vector<SbDrmKeyStatus> statuses;
@@ -365,7 +376,7 @@ void Session::OnAllKeysUpdated(const struct OpenCDMSession* /*ocdm_session*/,
       session->drm_system_, session->context_, id.c_str(), id.size(),
       session_keys.size(), keys.data(), statuses.data());
 
-  SB_LOG(INFO) << "Session update ended " << id;
+  SB_LOG(INFO) << "from OCDM server, all keys status update ended, session-id " << id;
 }
 
 // static
@@ -449,6 +460,45 @@ DrmSystemOcdm::~DrmSystemOcdm() {
   opencdm_destruct_system(ocdm_system_);
 }
 
+/**
+ class DrmSystemOcdm use below map structure to store key-id/key-status, map key is session-id
+ each session corresponding to a license, contain multiple content key(audio/video, renewal key)
+_______________________________________________________
+|session-id-1| key-id/status |key-id/status | ......
+|____________|_______________|______________|__________
+|session-id-2| key-id/status |key-id/status | ......
+|____________|_______________|______________|__________
+|session-id-3| key-id/status |key-id/status | ......
+|____________|_______________|______________|__________
+|session-id-4| key-id/status |key-id/status | ......
+|____________|_______________|______________|__________
+**/
+SbDrmKeyStatus DrmSystemOcdm::GetKeyStatus(const uint8_t * key, uint32_t key_size){
+  SbDrmKeyId drm_key_id;
+  SbDrmKeyStatus status = kSbDrmKeyStatusError;
+
+  std::copy_n(key, key_size, drm_key_id.identifier);
+  drm_key_id.identifier_size = key_size;
+
+  for (auto & session : sessions_){
+      auto session_key = session_keys_.find(session->Id());
+      if (session_key != session_keys_.end()) {
+          auto key_entry = std::find_if(
+                  session_key->second.begin(), session_key->second.end(),
+                  [&drm_key_id](const KeyWithStatus& key_with_status) {
+                  return memcmp(drm_key_id.identifier, key_with_status.key.identifier,
+                          std::min(key_with_status.key.identifier_size,
+                              drm_key_id.identifier_size)) == 0;
+                  });
+          if (key_entry != session_key->second.end()) {
+              status = key_entry->status;
+          }
+      }
+  }
+
+  return status;
+}
+
 // static
 bool DrmSystemOcdm::IsKeySystemSupported(const char* key_system,
                                          const char* mime_type) {
@@ -476,7 +526,7 @@ void DrmSystemOcdm::UpdateSession(int ticket,
                                   const void* session_id,
                                   int session_id_size) {
   std::string id = {static_cast<const char*>(session_id), session_id_size};
-  SB_LOG(INFO) << "Update: " << id;
+  SB_LOG(INFO) << "Update: " << id << " ticket " << ticket;
   auto* session = GetSessionById(id);
   if (session)
     session->Update(key, key_size, ticket);
@@ -505,6 +555,35 @@ void DrmSystemOcdm::UpdateServerCertificate(int ticket,
 SbDrmSystemPrivate::DecryptStatus DrmSystemOcdm::Decrypt(InputBuffer* buffer) {
   SB_NOTREACHED();
   return kFailure;
+}
+
+/*********
+ * frame width and height is a session based setting, save width/height into session class,
+ * only if width or height changed, call OCDM setting function
+ ********/
+void DrmSystemOcdm::SetVideoResolution(const std::string & session_id, uint32_t width, uint32_t height){
+  OpenCDMError ret = ERROR_NONE;
+  auto iter = std::find_if(
+      sessions_.begin(), sessions_.end(),
+      [&session_id](const std::unique_ptr<Session>& s) { return session_id == s->Id(); });
+
+  if (iter != sessions_.end()){
+      SB_DCHECK(session);
+
+      if (width > 0 && height > 0 && ((width != iter->get()->GetSessionFrameWidth()) || (height != iter->get()->GetSessionFrameHeight()))) {
+          char param[32];
+          sprintf(param, "%d,%d", width, height);
+          if ((ret = opencdm_session_set_parameter(iter->get()->OcdmSession(), std::string("RESOLUTION"), std::string(param))) == ERROR_NONE){
+              SB_LOG(INFO) << "set resolution width: " << width << " height:" << height << " session id " << iter->get()->Id();
+              iter->get()->SetSessionFrameWidth(width);
+              iter->get()->SetSessionFrameHeight(height);
+          }else{
+              SB_LOG(ERROR) << "set session resolution error ret " << ret;
+          }
+      }
+  }else{
+      SB_LOG(ERROR) << "set session resolution error, can not find session with id " << session_id;
+  }
 }
 
 Session* DrmSystemOcdm::GetSessionById(const std::string& id) const {
@@ -658,11 +737,25 @@ bool DrmSystemOcdm::Decrypt(const std::string& id,
                                      sub_sample, sub_sample_count, iv,
                                      key_id, 0, caps) == ERROR_NONE;
   }
+#ifndef USED_SVP_EXT
   return opencdm_gstreamer_session_decrypt_new(session->OcdmSession(), buffer,
                                            sub_sample, sub_sample_count, iv,
                                            key_id, 0, encryption_pattern.crypt_byte_block,
                                            encryption_pattern.skip_byte_block,
                                            encryption_scheme) == ERROR_NONE;
+#else
+  return opencdm_gstreamer_session_decrypt_ex_new(session->OcdmSession(),
+                                          buffer,
+                                          sub_sample,
+                                          sub_sample_count,
+                                          iv,
+                                          key_id,
+                                          0,
+                                          encryption_pattern.crypt_byte_block,
+                                          encryption_pattern.skip_byte_block,
+                                          encryption_scheme,
+                                          caps) == ERROR_NONE;
+#endif
 }
 
 const void* DrmSystemOcdm::GetMetrics(int* size) {

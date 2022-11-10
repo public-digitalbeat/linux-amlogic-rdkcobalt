@@ -29,6 +29,9 @@
 #include "starboard/shared/starboard/thread_checker.h"
 #include "starboard/thread.h"
 
+// For new DRM SVP-EXT, ocdm allocate the secmem
+#define USED_SVP_EXT 1
+
 struct _GstCaps;
 struct _GstBuffer;
 struct OpenCDMSystem;
@@ -69,6 +72,7 @@ class DrmSystemOcdm : public SbDrmSystemPrivate {
 
   ~DrmSystemOcdm() override;
 
+  SbDrmKeyStatus GetKeyStatus(const uint8_t * key, uint32_t key_size);
   static bool IsKeySystemSupported(const char* key_system,
                                    const char* mime_type);
 
@@ -91,6 +95,7 @@ class DrmSystemOcdm : public SbDrmSystemPrivate {
 
   const void* GetMetrics(int* size) override;
 
+  void SetVideoResolution(const std::string & session_id, uint32_t width, uint32_t height);
   void AddObserver(Observer* obs);
   void RemoveObserver(Observer* obs);
   void OnKeyUpdated(const std::string& session_id,
@@ -119,6 +124,51 @@ class DrmSystemOcdm : public SbDrmSystemPrivate {
 
   std::set<std::string> GetReadyKeys() const;
   KeysWithStatus GetSessionKeys(const std::string& session_id) const;
+
+static  std::string hex2string(const uint8_t *data, int len){
+      char hex_map[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+      std::string hex;
+
+      for (int i = 0; i < len; i++) {
+          int lower = data[i] & 0x0f;
+          int upper = (data[i] >> 4) & 0x0f;
+          hex.push_back(hex_map[upper]);
+          hex.push_back(hex_map[lower]);
+      }
+      return hex;
+  }
+
+static  const char * keyStatusToString(SbDrmKeyStatus status) {
+      const char * str = "unknown";
+      switch (status) {
+          case kSbDrmKeyStatusUsable:
+              str = "Usable";
+              break;
+          case kSbDrmKeyStatusExpired:
+              str = "Expired";
+              break;
+          case kSbDrmKeyStatusReleased:
+              str = "Released";
+              break;
+          case kSbDrmKeyStatusRestricted:
+              str = "Restricted";
+              break;
+          case kSbDrmKeyStatusDownscaled:
+              str = "Downscaled";
+              break;
+          case kSbDrmKeyStatusPending:
+              str = "Pending";
+              break;
+          case kSbDrmKeyStatusError:
+              str = "Error";
+              break;
+          default:
+              str = "unknown status";
+              break;
+      }
+
+      return str;
+  }
 
  private:
   session::Session* GetSessionById(const std::string& id) const;

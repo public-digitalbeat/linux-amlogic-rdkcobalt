@@ -21,7 +21,6 @@
 #include "starboard/configuration.h"
 #include "starboard/common/scoped_ptr.h"
 
-
 #include <string>
 
 #if defined(VIDEO_RESOLUTION_1080P)
@@ -85,6 +84,7 @@ public:
   RDKShellInfo();
   ~RDKShellInfo();
   bool ImpGetFocusStatus();
+  std::string ImpGetFocusAppName();
 private:
   struct RDKShellInfoImpl;
   mutable ::starboard::scoped_ptr<RDKShellInfoImpl> impl_;
@@ -105,6 +105,25 @@ static bool GetConnectstatus();
 private:
   struct HdcpProfileImpl;
   mutable ::starboard::scoped_ptr<HdcpProfileImpl> impl_;
+};
+
+class VoiceInput {
+public:
+  VoiceInput();
+  ~VoiceInput();
+
+  static int GetData(void *data, int size);
+  static bool StartRecord();
+  static bool StopRecord();
+  static bool isSampleRateSupport(int sampleRate);
+  static bool isMuted();
+  static int GetSampleRate();
+  static int GetMicroPhoneEnable();
+
+private:
+  struct VoiceInputImpl;
+  mutable ::starboard::scoped_ptr<VoiceInputImpl> impl_;
+  static VoiceInput *_instance;
 };
 
 }  // namespace shared
